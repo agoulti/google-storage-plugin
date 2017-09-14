@@ -28,15 +28,17 @@
   </f:entry>
 
   <!-- Allow the user to make the file world-visible -->
-  <f:entry title="${%Share Publicly?}" field="sharedPublicly">
+  <f:entry title="${%Share Publicly?} isBuild is ${isBuild}; class name is, its ${it.class.name} instance ${instance.class.name} job ${job.class.name}" field="sharedPublicly">
     <f:checkbox />
   </f:entry>
 
+  <j:if test="${isBuild == false}">
   <!-- Allow the user to indicate that they want this even if the
   build failed -->
   <f:entry title="${%For failed jobs?}" field="forFailedJobs">
     <f:checkbox />
   </f:entry>
+  </j:if>
 
   <!-- Allow the user to indicate that these files should be viewable
   inline in the browser -->

@@ -18,7 +18,7 @@
 	 xmlns:a="/lib/auth">
   <a:credentials title="${%Google Credentials}" field="credentialsId" />
 
-  <j:set var="isBuild" value="false"/>
+  <j:set var="isBuild" value="true"/>
   <f:block>
     <f:hetero-list name="uploads" hasHeader="true"
          descriptors="${descriptor.getUploads()}"
