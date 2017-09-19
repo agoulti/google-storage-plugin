@@ -15,6 +15,7 @@
  */
 package com.google.jenkins.plugins.storage.reports;
 
+import hudson.model.Run;
 import java.util.Collections;
 import java.util.Set;
 
@@ -36,8 +37,8 @@ public class BuildGcsUploadReport extends AbstractGcsUploadReport {
   private final Set<String> buckets;
   private final Set<String> files;
 
-  public BuildGcsUploadReport(AbstractBuild<?, ?> build) {
-    super(build);
+  public BuildGcsUploadReport(Run<?, ?> run) {
+    super(run);
     this.buckets = Sets.newHashSet();
     this.files = Sets.newHashSet();
   }
@@ -46,7 +47,7 @@ public class BuildGcsUploadReport extends AbstractGcsUploadReport {
    * @param project
    *          a project to get {@link BuildGcsUploadReport} for.
    * @return the {@link BuildGcsUploadReport} of the last build, as returned
-   *         by {@link #of(AbstractBuild)}, or null of no build existed.
+   *         by {@link #of(Run)}, or null of no build existed.
    */
   @Nullable
   public static BuildGcsUploadReport of(AbstractProject<?, ?> project) {
@@ -72,14 +73,14 @@ public class BuildGcsUploadReport extends AbstractGcsUploadReport {
    *         create a new {@link BuildGcsUploadReport} and return.
    */
   public static synchronized BuildGcsUploadReport of(
-      AbstractBuild<?, ?> build) {
+      Run<?, ?> run) {
     BuildGcsUploadReport links =
-        build.getAction(BuildGcsUploadReport.class);
+        run.getAction(BuildGcsUploadReport.class);
     if (links != null) {
       return links;
     }
-    links = new BuildGcsUploadReport(build);
-    build.addAction(links);
+    links = new BuildGcsUploadReport(run);
+    run.addAction(links);
     return links;
   }
 

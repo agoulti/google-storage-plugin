@@ -15,6 +15,7 @@
  */
 package com.google.jenkins.plugins.storage;
 
+import hudson.model.Run;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -129,7 +130,7 @@ public class AbstractUploadTest {
 
     @Override
     @Nullable
-    protected UploadSpec getInclusions(AbstractBuild<?, ?> build,
+    protected UploadSpec getInclusions(Run<?, ?> run,
         FilePath workspace, TaskListener listener) throws UploadException {
       return uploads;
     }

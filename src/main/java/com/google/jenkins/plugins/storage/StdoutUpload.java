@@ -15,6 +15,7 @@
  */
 package com.google.jenkins.plugins.storage;
 
+import hudson.model.Run;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -97,19 +98,22 @@ public class StdoutUpload extends AbstractUpload {
    */
   @Override
   @Nullable
-  protected UploadSpec getInclusions(AbstractBuild<?, ?> build,
+  protected UploadSpec getInclusions(Run<?, ?> run,
       FilePath workspace, TaskListener listener) throws UploadException {
     try {
       OutputStream outputStream = null;
       try {
-        FilePath logDir = new FilePath(build.getLogFile()).getParent();
+        FilePath logDir = new FilePath(run.getLogFile()).getParent();
 
-        String resolvedLogName =
-            Util.replaceMacro(getLogName(), build.getEnvironment(listener));
+
+        String resolvedLogName = getLogName();
+        if(run instanceof AbstractBuild) {
+          resolvedLogName = Util.replaceMacro(getLogName(), run.getEnvironment(listener));
+        }
         FilePath logFile = new FilePath(logDir, resolvedLogName);
 
         outputStream = new PlainTextConsoleOutputStream(logFile.write());
-        copy(build.getLogInputStream(), outputStream);
+        copy(run.getLogInputStream(), outputStream);
 
         return new UploadSpec(logDir, ImmutableList.of(logFile));
       } finally {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Google Inc. All Rights Reserved.
+ * Copyright 2013 Google Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,28 @@
  */
 package com.google.jenkins.plugins.storage;
 
-import java.io.IOException;
-import java.util.Arrays;
-
-import javax.annotation.Nullable;
-
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-
 import com.google.common.base.Objects;
+import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
 import com.google.jenkins.plugins.util.Resolve;
-
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.Builder;
 import hudson.util.FormValidation;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.Arrays;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import jenkins.tasks.SimpleBuildStep;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * This upload extension implements the classical upload pattern
@@ -39,116 +44,43 @@ import hudson.util.FormValidation;
  * relative to the build workspace, and those files are uploaded
  * to the storage bucket.
  */
-public class ClassicUpload extends AbstractUpload {
+public class ClassicUploadStep extends Builder implements SimpleBuildStep, Serializable {
+  @Nonnull
+  protected ClassicUpload upload;
+
   /**
-   * Construct the classic upload implementation from the base properties
-   * and the glob for matching files.
+   * Construct the classic upload step. See ClassicUpload documentation for parameter descriptions.
    */
   @DataBoundConstructor
-  public ClassicUpload(String bucket, boolean sharedPublicly,
-      boolean forFailedJobs, boolean showInline, boolean stripPathPrefix,
+  public ClassicUploadStep(String credentialsId, String bucket, boolean sharedPublicly,
+      boolean showInline, boolean stripPathPrefix,
       @Nullable String pathPrefix, @Nullable UploadModule module,
-      String pattern,
-      // Legacy arguments for backwards compatibility
-      @Deprecated @Nullable String bucketNameWithVars,
-      @Deprecated @Nullable String sourceGlobWithVars) {
-    super(Objects.firstNonNull(bucket, bucketNameWithVars), sharedPublicly,
-        forFailedJobs, showInline, stripPathPrefix ? pathPrefix : null, module);
-    this.sourceGlobWithVars =
-        Objects.firstNonNull(pattern, sourceGlobWithVars);
+      String pattern) {
+    this.credentialsId = credentialsId;
+    upload = new ClassicUpload(bucket, sharedPublicly, false /* forFailedJobs */, showInline, stripPathPrefix, pathPrefix, module, pattern, null, null);
   }
 
   /**
-   * {@inheritDoc}
+   * The unique ID for the credentials we are using to
+   * authenticate with GCS.
    */
-  @Override
-  public String getDetails() {
-    return getPattern();
+  public String getCredentialsId() {
+    return credentialsId;
   }
+  private final String credentialsId;
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  @Nullable
-  protected UploadSpec getInclusions(AbstractBuild<?, ?> build,
-      FilePath workspace, TaskListener listener) throws UploadException {
+  public void perform(Run<?,?> run, FilePath workspace, Launcher launcher, TaskListener listener)
+      throws IOException {
     try {
-      String globResolvedVars = Util.replaceMacro(
-          getPattern(), build.getEnvironment(listener));
-      // In order to support absolute globs (e.g. /gagent/metaOutput/std*.txt)
-      // we must identify absolute paths and rebase the "workspace" to be the
-      // root directory and the glob to be relative to root.
-      //
-      // NOTE: FilePath#list complains when the ant-style glob is actually
-      // an absolute path.
-      //
-      // TODO(mattmoor): This will not work on Windows, but short of relying
-      // on Java 7's java.nio.file.Paths there doesn't appear to be a good
-      // platform agnostic approach to this.
-      if (globResolvedVars.startsWith("/")) {
-        workspace = getRoot(workspace);
-        // TODO(mattmoor): Support Windows
-        // Drop the leading "/" in a fashion that should be compatible with
-        // non-Unix platforms (e.g. Windows, which uses drive letters: C:\)
-        globResolvedVars = globResolvedVars.substring(1);
-      }
-
-      FilePath[] inclusions = workspace.list(globResolvedVars);
-      if (inclusions.length == 0) {
-        listener.error(module.prefix(
-            Messages.ClassicUpload_NoArtifacts(
-                globResolvedVars)));
-        return null;
-      }
-      listener.getLogger().println(module.prefix(
-          Messages.ClassicUpload_FoundForPattern(
-              inclusions.length, getPattern())));
-      return new UploadSpec(workspace, Arrays.asList(inclusions));
-    } catch (InterruptedException e) {
-      throw new UploadException(Messages.AbstractUpload_IncludeException(), e);
-    } catch (IOException e) {
-      throw new UploadException(Messages.AbstractUpload_IncludeException(), e);
+      upload.perform(GoogleRobotCredentials.getById(getCredentialsId()), run, workspace, listener);
+    } catch(UploadException e) {
+      throw new IOException("Could not perform upload", e);
     }
   }
 
-
-
-  /**
-   * Iterate from the workspace through parent directories to its root.
-   */
-  private FilePath getRoot(final FilePath workspace) {
-    FilePath iter = workspace;
-    while (iter.getParent() != null) {
-      iter = iter.getParent();
-    }
-    return iter;
-  }
-
-  /**
-   * The glob of files to upload, which potentially contains unresolved
-   * symbols, such as $JOB_NAME and $BUILD_NUMBER.
-   */
-  public String getPattern() {
-    return sourceGlobWithVars;
-  }
-  /** NOTE: old name kept for deserialization */
-  private final String sourceGlobWithVars;
-
-
-  /**
-   * Denotes this is an {@link AbstractUpload} plugin
-   */
   @Extension
-  public static class DescriptorImpl extends AbstractUploadDescriptor {
-    public DescriptorImpl() {
-      this(ClassicUpload.class);
-    }
-
-    public DescriptorImpl(
-      Class<? extends ClassicUpload> clazz) {
-      super(clazz);
-    }
+  public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
     /**
      * {@inheritDoc}
@@ -159,35 +91,11 @@ public class ClassicUpload extends AbstractUpload {
     }
 
     /**
-     * This callback validates the {@code pattern} input field's
-     * values.
+     * {@inheritDoc}
      */
-    public FormValidation doCheckPattern(
-        @QueryParameter final String pattern)
-        throws IOException {
-      String resolvedInput = Resolve.resolveBuiltin(pattern);
-      if (resolvedInput.isEmpty()) {
-        return FormValidation.error(
-            Messages.ClassicUpload_EmptyGlob());
-      }
-
-      if (resolvedInput.contains("$")) {
-        // resolved file name still contains variable marker
-        return FormValidation.error(
-            Messages.ClassicUpload_BadGlobChar("$",
-                Messages.AbstractUploadDescriptor_DollarSuggest()));
-      }
-      // TODO(mattmoor): Validation:
-      //  - relative path from workspace
-      //  - Ant mask
-      //
-      // TODO(mattmoor): The Ant glob validation is lackluster in that it
-      // requires a FilePath with which to validate the glob.  Consider
-      // putting together a regular expression to match valid patterns.
-      //
-      // NOTE: This side of things must work well with windows backward
-      // slashes.
-      return FormValidation.ok();
+    @Override
+    public boolean isApplicable(Class<? extends AbstractProject> jobType) {
+      return true;
     }
   }
 }
