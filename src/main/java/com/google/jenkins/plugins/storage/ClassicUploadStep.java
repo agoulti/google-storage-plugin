@@ -66,6 +66,15 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
     return upload.getPattern();
   }
 
+  /**
+   * The unique ID for the credentials we are using to
+   * authenticate with GCS.
+   */
+  public String getCredentialsId() {
+    return credentialsId;
+  }
+  private final String credentialsId;
+
   public String getBucket() {
     return upload.getBucket();
   }
