@@ -16,18 +16,21 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
          xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form"
 	 xmlns:a="/lib/auth">
-  <f:entry title="${%File Pattern}" field="pattern">
+
+	<a:credentials title="${%Google Credentials}" field="credentialsId" />
+
+  <f:entry title="${%File Pattern}" field="pattern" help="/descriptor/com.google.jenkins.plugins.storage.ClassicUpload/help/pattern">
     <f:textbox />
   </f:entry>
 
   <!-- Allow the user to specify the name of a bucket containing build
   variables to store the uploaded files -->
-  <f:entry title="${%Storage Location}" field="bucket">
+  <f:entry title="${%Storage Location}" field="bucket" help="/descriptor/com.google.jenkins.plugins.storage.ClassicUpload/help/bucket">
     <f:textbox default="gs://" />
   </f:entry>
 
   <!-- Allow the user to make the file world-visible -->
-  <f:entry title="${%Share Publicly?}" field="sharedPublicly">
+  <f:entry title="${%Share Publicly?}" field="sharedPublicly"  help="/descriptor/com.google.jenkins.plugins.storage.ClassicUpload/help/sharedPublicly">
     <f:checkbox />
   </f:entry>
 
@@ -41,7 +44,7 @@
   from uploaded file names -->
   <f:optionalBlock title="${%Strip path prefix?}" name="stripPathPrefix"
   inline="true" checked="${instance.pathPrefix != null}" >
-    <f:entry title="${%Path prefix}" field="pathPrefix">
+    <f:entry title="${%Path prefix}" field="pathPrefix" help="/descriptor/com.google.jenkins.plugins.storage.ClassicUpload/help/pathPrefix">
       <f:textbox default="" />
     </f:entry>
   </f:optionalBlock>

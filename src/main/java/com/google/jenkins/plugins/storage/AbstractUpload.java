@@ -17,6 +17,8 @@ package com.google.jenkins.plugins.storage;
 
 import static java.util.logging.Level.SEVERE;
 
+import com.cloudbees.plugins.credentials.impl.CertificateCredentialsImpl.UploadedKeyStoreSource.Upload;
+import hudson.model.Run;
 import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigInteger;
@@ -144,14 +146,22 @@ public abstract class AbstractUpload
   }
 
   /**
+   * Allow old signature for compatibility.
+   */
+  public final void perform(GoogleRobotCredentials credentials,
+      AbstractBuild<?, ?> build, TaskListener listener) throws UploadException {
+    perform(credentials, build, build.getWorkspace(), listener);
+  }
+
+  /**
    * The main action entrypoint of this extension.  This uploads the
    * contents included by the implementation to our resolved storage
    * bucket.
    */
   public final void perform(GoogleRobotCredentials credentials,
-      AbstractBuild<?, ?> build, TaskListener listener)
+      Run<?, ?> run, FilePath workspace, TaskListener listener)
       throws UploadException {
-    if (!forResult(build.getResult())) {
+    if (!forResult(run.getResult())) {
       // Don't upload for the given build state.
       return;
     }
@@ -159,8 +169,13 @@ public abstract class AbstractUpload
     try {
       // Turn paths containing things like $BUILD_NUMBER and $JOB_NAME into
       // their fully resolved forms.
-      String bucketNameResolvedVars = Util.replaceMacro(
-          getBucket(), build.getEnvironment(listener));
+      String bucketNameResolvedVars = getBucket();
+
+      if (run instanceof AbstractBuild) {
+        // Do variable name expansion only for non-pipeline builds.
+        bucketNameResolvedVars = Util.replaceMacro(
+            getBucket(), run.getEnvironment(listener));
+      }
 
       if (!bucketNameResolvedVars.startsWith(GCS_SCHEME)) {
         listener.error(module.prefix(
@@ -173,13 +188,13 @@ public abstract class AbstractUpload
           bucketNameResolvedVars.substring(GCS_SCHEME.length());
 
       UploadSpec uploads = getInclusions(
-          build, checkNotNull(build.getWorkspace()), listener);
+          run, checkNotNull(workspace), listener);
 
       if (uploads != null) {
-        BuildGcsUploadReport links = BuildGcsUploadReport.of(build);
+        BuildGcsUploadReport links = BuildGcsUploadReport.of(run);
         links.addBucket(bucketNameResolvedVars);
 
-        initiateUploadsAtWorkspace(credentials, build, bucketNameResolvedVars,
+        initiateUploadsAtWorkspace(credentials, run, bucketNameResolvedVars,
             uploads, listener);
       }
     } catch (InterruptedException e) {
@@ -216,7 +231,7 @@ public abstract class AbstractUpload
    */
   @Nullable
   protected abstract UploadSpec getInclusions(
-      AbstractBuild<?, ?> build, FilePath workspace, TaskListener listener)
+      Run<?, ?> run, FilePath workspace, TaskListener listener)
       throws UploadException;
 
   /**
@@ -243,8 +258,8 @@ public abstract class AbstractUpload
    *
    * NOTE: This can be overriden to surface additional (or less) information.
    */
-  protected Map<String, String> getMetadata(AbstractBuild<?, ?> build) {
-    return MetadataContainer.of(build).getSerializedMetadata();
+  protected Map<String, String> getMetadata(Run<?, ?> run) {
+    return MetadataContainer.of(run).getSerializedMetadata();
   }
 
   /**
@@ -252,6 +267,11 @@ public abstract class AbstractUpload
    * build result.
    */
   public boolean forResult(Result result) {
+    if (result == null) {
+      // We might have unfinished builds, for e.g., through pipeline of Build Step.
+      // Always run for those.
+      return true;
+    }
     if (result == Result.SUCCESS) {
       // We always run on successful builds.
       return true;
@@ -341,7 +361,7 @@ public abstract class AbstractUpload
    */
   private void initiateUploadsAtWorkspace(
       final GoogleRobotCredentials credentials,
-      final AbstractBuild build, String storagePrefix,
+      final Run run, String storagePrefix,
       final UploadSpec uploads,
       final TaskListener listener) throws UploadException {
     try {
@@ -358,7 +378,7 @@ public abstract class AbstractUpload
       final String objectPrefix = (halves.length == 1) ? "" : halves[1];
 
       // Within the workspace, upload all of the files.
-      final Map<String, String> metadata = getMetadata(build);
+      final Map<String, String> metadata = getMetadata(run);
 
       try {
           // Use remotable credential to access the storage service from the
@@ -389,7 +409,7 @@ public abstract class AbstractUpload
 
 
       // We can't do this over the wire, so do it in bulk here
-      BuildGcsUploadReport report = BuildGcsUploadReport.of(build);
+      BuildGcsUploadReport report = BuildGcsUploadReport.of(run);
       for (FilePath include : uploads.inclusions) {
         report.addUpload(getStrippedFilename(
             getRelative(include, uploads.workspace)), storagePrefix);
