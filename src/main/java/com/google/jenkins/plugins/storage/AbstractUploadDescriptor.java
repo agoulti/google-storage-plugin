@@ -17,6 +17,7 @@ package com.google.jenkins.plugins.storage;
 
 import java.io.IOException;
 
+import net.sf.json.JSONObject;
 import org.kohsuke.stapler.QueryParameter;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -25,6 +26,7 @@ import com.google.jenkins.plugins.util.Resolve;
 
 import hudson.model.Descriptor;
 import hudson.util.FormValidation;
+import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Descriptor from which Upload extensions must derive their descriptor.
@@ -95,6 +97,15 @@ public abstract class AbstractUploadDescriptor
     // Cloud Console.
     // TODO(mattmoor): Check availability or ownership of the bucket
     return FormValidation.ok();
+  }
+
+  @Override
+  public AbstractUpload newInstance(StaplerRequest req, JSONObject formData)
+      throws FormException {
+    if (Boolean.FALSE.equals(formData.remove("stripPathPrefix"))) {
+      formData.remove("pathPrefix");
+    }
+    return super.newInstance(req, formData);
   }
 
   /**

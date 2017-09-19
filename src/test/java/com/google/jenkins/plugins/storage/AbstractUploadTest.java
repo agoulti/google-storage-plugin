@@ -118,7 +118,11 @@ public class AbstractUploadTest {
     public FakeUpload(String bucket, boolean isPublic, boolean forFailed,
         boolean showInline, @Nullable String pathPrefix,
         MockUploadModule module, String details, @Nullable UploadSpec uploads) {
-      super(bucket, isPublic, forFailed, showInline, pathPrefix, module);
+      super(bucket, module);
+      setSharedPublicly(isPublic);
+      setForFailedJobs(forFailed);
+      setShowInline(showInline);
+      setPathPrefix(pathPrefix);
       this.details = details;
       this.uploads = uploads;
     }

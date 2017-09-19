@@ -36,7 +36,9 @@ import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import jenkins.tasks.SimpleBuildStep;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 /**
@@ -54,41 +56,58 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
    * Construct the classic upload step. See ClassicUpload documentation for parameter descriptions.
    */
   @DataBoundConstructor
-  public ClassicUploadStep(String credentialsId, String bucket, boolean sharedPublicly,
-      boolean showInline, boolean stripPathPrefix,
-      @Nullable String pathPrefix, @Nullable UploadModule module,
+  public ClassicUploadStep(String credentialsId, String bucket, @Nullable UploadModule module,
       String pattern) {
     this.credentialsId = credentialsId;
-    upload = new ClassicUpload(bucket, sharedPublicly, false /* forFailedJobs */, showInline, stripPathPrefix, pathPrefix, module, pattern, null, null);
+    upload = new ClassicUpload(bucket, null, pattern, null, null);
+  }
+
+  /**
+   * Whether to surface the file being uploaded to anyone with the link.
+   */
+  @DataBoundSetter
+  public void setSharedPublicly(boolean sharedPublicly) {
+    upload.setSharedPublicly(sharedPublicly);
+  }
+  public boolean isSharedPublicly() {
+    return upload.isSharedPublicly();
+  }
+
+  /**
+   * Whether to indicate in metadata that the file should be viewable inline
+   * in web browsers, rather than requiring it to be downloaded first.
+   */
+  @DataBoundSetter
+  public void setShowInline(boolean showInline) {
+    upload.setShowInline(showInline);
+  }
+  public boolean isShowInline() {
+    return upload.isShowInline();
+  }
+
+
+  /**
+   * The path prefix that will be stripped from uploaded files. May be null
+   * if no path prefix needs to be stripped.
+   *
+   * Filenames that do not start with this prefix will not be modified. Trailing slash is
+   * automatically added if it is missing.
+   */
+  @DataBoundSetter
+  public void setPathPrefix(@Nullable String pathPrefix) {
+    upload.setPathPrefix(pathPrefix);
+  }
+  @Nullable
+  public String getPathPrefix() {
+    return upload.getPathPrefix();
   }
 
   public String getPattern() {
     return upload.getPattern();
   }
 
-  /**
-   * The unique ID for the credentials we are using to
-   * authenticate with GCS.
-   */
-  public String getCredentialsId() {
-    return credentialsId;
-  }
-  private final String credentialsId;
-
   public String getBucket() {
     return upload.getBucket();
-  }
-
-  @Nullable
-  public String getPathPrefix() {
-    return upload.getPathPrefix();
-  }
-
-  public boolean isSharedPublicly() {
-    return upload.isSharedPublicly();
-  }
-  public boolean isShowInline() {
-    return upload.isShowInline();
   }
 
   /**
@@ -110,7 +129,7 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
     }
   }
 
-  @Extension
+  @Extension @Symbol("google-storage-upload")
   public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
     /**

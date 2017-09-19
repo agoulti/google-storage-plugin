@@ -76,6 +76,8 @@ import hudson.model.Hudson;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.remoting.Callable;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * This new extension point is used for surfacing different kinds of
@@ -116,33 +118,17 @@ public abstract class AbstractUpload
    *
    * @param bucket The unresolved name of the storage bucket within
    * which to store the resulting objects.
-   * @param sharedPublicly Whether to publicly share the objects being uploaded
-   * @param forFailedJobs Whether to perform the upload regardless of the
-   * build's outcome
    * @param showInline Whether to indicate in metadata that the file should be
    * viewable inline in web browsers, rather than requiring it to be downloaded
    * first.
-   * @param pathPrefix Path prefix to strip from uploaded files when determining
-   * the filename in GCS. Null indicates no stripping. Filenames that do not
-   * start with this prefix will not be modified. Trailing slash is
-   * automatically added if it is missing.
    */
-  public AbstractUpload(String bucket, boolean sharedPublicly,
-      boolean forFailedJobs, boolean showInline, @Nullable String pathPrefix,
-      @Nullable UploadModule module) {
+  public AbstractUpload(String bucket, @Nullable UploadModule module) {
     if (module != null) {
       this.module = module;
     } else {
       this.module = getDescriptor().getModule();
     }
     this.bucketNameWithVars = checkNotNull(bucket);
-    this.sharedPublicly = sharedPublicly;
-    this.forFailedJobs = forFailedJobs;
-    this.showInline = showInline;
-    if (pathPrefix != null && !pathPrefix.endsWith("/")) {
-      pathPrefix += "/";
-    }
-    this.pathPrefix = pathPrefix;
   }
 
   /**
@@ -296,37 +282,59 @@ public abstract class AbstractUpload
   /**
    * Whether to surface the file being uploaded to anyone with the link.
    */
+  @DataBoundSetter
+  public void setSharedPublicly(boolean sharedPublicly) {
+    this.sharedPublicly = sharedPublicly;
+  }
   public boolean isSharedPublicly() {
     return sharedPublicly;
   }
-  private final boolean sharedPublicly;
+  private boolean sharedPublicly;
 
   /**
    * Whether to attempt the upload, even if the job failed.
    */
+  @DataBoundSetter
+  public void setForFailedJobs(boolean forFailedJobs) {
+    this.forFailedJobs = forFailedJobs;
+  }
   public boolean isForFailedJobs() {
     return forFailedJobs;
   }
-  private final boolean forFailedJobs;
+  private boolean forFailedJobs;
 
   /**
    * Whether to indicate in metadata that the file should be viewable inline
    * in web browsers, rather than requiring it to be downloaded first.
    */
+  @DataBoundSetter
+  public void setShowInline(boolean showInline) {
+    this.showInline = showInline;
+  }
   public boolean isShowInline() {
     return showInline;
   }
-  private final boolean showInline;
+  private boolean showInline;
 
   /**
    * The path prefix that will be stripped from uploaded files. May be null
    * if no path prefix needs to be stripped.
+   *
+   * Filenames that do not start with this prefix will not be modified. Trailing slash is
+   * automatically added if it is missing.
    */
+  @DataBoundSetter
+  public void setPathPrefix(@Nullable String pathPrefix) {
+    if (pathPrefix != null && !pathPrefix.endsWith("/")) {
+      pathPrefix += "/";
+    }
+    this.pathPrefix = pathPrefix;
+  }
   @Nullable
   public String getPathPrefix() {
     return pathPrefix;
   }
-  private final String pathPrefix;
+  private String pathPrefix;
 
   /**
    * The module to use for providing dependencies.

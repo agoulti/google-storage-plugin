@@ -52,14 +52,11 @@ public class StdoutUpload extends AbstractUpload {
    * information about how to name the build log file.
    */
   @DataBoundConstructor
-  public StdoutUpload(@Nullable String bucket, boolean sharedPublicly,
-      boolean forFailedJobs, boolean showInline, boolean stripPathPrefix,
-      @Nullable String pathPrefix,
+  public StdoutUpload(@Nullable String bucket,
       @Nullable UploadModule module, String logName,
       // Legacy arguments for backwards compatibility
       @Deprecated @Nullable String bucketNameWithVars) {
-    super(Objects.firstNonNull(bucket, bucketNameWithVars), sharedPublicly,
-        forFailedJobs, showInline, stripPathPrefix ? pathPrefix : null, module);
+    super(Objects.firstNonNull(bucket, bucketNameWithVars), module);
     this.logName = checkNotNull(logName);
   }
 

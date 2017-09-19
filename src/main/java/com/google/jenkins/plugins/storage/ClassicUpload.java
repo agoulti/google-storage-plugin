@@ -46,15 +46,12 @@ public class ClassicUpload extends AbstractUpload {
    * and the glob for matching files.
    */
   @DataBoundConstructor
-  public ClassicUpload(String bucket, boolean sharedPublicly,
-      boolean forFailedJobs, boolean showInline, boolean stripPathPrefix,
-      @Nullable String pathPrefix, @Nullable UploadModule module,
+  public ClassicUpload(String bucket, @Nullable UploadModule module,
       String pattern,
       // Legacy arguments for backwards compatibility
       @Deprecated @Nullable String bucketNameWithVars,
       @Deprecated @Nullable String sourceGlobWithVars) {
-    super(Objects.firstNonNull(bucket, bucketNameWithVars), sharedPublicly,
-        forFailedJobs, showInline, stripPathPrefix ? pathPrefix : null, module);
+    super(Objects.firstNonNull(bucket, bucketNameWithVars), module);
     this.sourceGlobWithVars =
         Objects.firstNonNull(pattern, sourceGlobWithVars);
   }
