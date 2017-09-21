@@ -15,6 +15,7 @@
  */
 package com.google.jenkins.plugins.storage;
 
+import hudson.model.Run;
 import java.io.IOException;
 
 import javax.annotation.Nullable;
@@ -69,8 +70,7 @@ public abstract class AbstractBucketLifecycleManager extends AbstractUpload {
    */
   public AbstractBucketLifecycleManager(String bucket,
       @Nullable UploadModule module) {
-    super(bucket, false /*sharedPublicly*/, false /*forFailedJobs*/,
-        false /*showInline*/, null /*pathPrefix */, module);
+    super(bucket, module);
   }
 
   /**
@@ -78,7 +78,7 @@ public abstract class AbstractBucketLifecycleManager extends AbstractUpload {
    */
   @Override
   @Nullable
-  protected final UploadSpec getInclusions(AbstractBuild<?, ?> build,
+  protected final UploadSpec getInclusions(Run<?, ?> run,
       FilePath workspace, TaskListener listener) throws UploadException {
     // Return an empty list, we don't actually do any uploads.
     return new UploadSpec(workspace, ImmutableList.<FilePath>of());
