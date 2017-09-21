@@ -33,6 +33,7 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public abstract class AbstractUploadDescriptor
     extends Descriptor<AbstractUpload> {
+
   /**
    * Create the descriptor of the Upload from it's type on associated module
    * for instantiating dependencies.

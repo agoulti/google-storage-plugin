@@ -28,6 +28,7 @@ import hudson.model.AbstractProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import java.io.IOException;
@@ -36,10 +37,12 @@ import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import jenkins.tasks.SimpleBuildStep;
+import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * This upload extension implements the classical upload pattern
@@ -52,10 +55,15 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
   @Nonnull
   protected ClassicUpload upload;
 
+  @DataBoundConstructor
+  public ClassicUploadStep(String credentialsId, String bucket, String pattern) {
+    this.credentialsId = credentialsId;
+    upload = new ClassicUpload(bucket, null, pattern, null, null);
+  }
+
   /**
    * Construct the classic upload step. See ClassicUpload documentation for parameter descriptions.
    */
-  @DataBoundConstructor
   public ClassicUploadStep(String credentialsId, String bucket, @Nullable UploadModule module,
       String pattern) {
     this.credentialsId = credentialsId;
@@ -120,6 +128,11 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
   private final String credentialsId;
 
   @Override
+  public BuildStepMonitor getRequiredMonitorService() {
+    return BuildStepMonitor.NONE;
+  }
+
+  @Override
   public void perform(Run<?,?> run, FilePath workspace, Launcher launcher, TaskListener listener)
       throws IOException {
     try {
@@ -129,7 +142,7 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
     }
   }
 
-  @Extension @Symbol("google-storage-upload")
+  @Extension @Symbol("googleStorageUpload")
   public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
     /**
@@ -146,6 +159,15 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
     @Override
     public boolean isApplicable(Class<? extends AbstractProject> jobType) {
       return true;
+    }
+
+    @Override
+    public Builder newInstance(StaplerRequest req, JSONObject formData)
+        throws FormException {
+      if (Boolean.FALSE.equals(formData.remove("stripPathPrefix"))) {
+        formData.remove("pathPrefix");
+      }
+      return super.newInstance(req, formData);
     }
   }
 }
