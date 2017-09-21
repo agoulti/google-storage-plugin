@@ -67,7 +67,7 @@ public abstract class AbstractUploadDescriptor
    * This callback validates the {@code bucketNameWithVars} input field's
    * values.
    */
-  public FormValidation doCheckBucketNameWithVars(
+  public static FormValidation staticDoCheckBucketNameWithVars(
       @QueryParameter final String bucketNameWithVars)
       throws IOException {
     String resolvedInput = Resolve.resolveBuiltin(bucketNameWithVars);
@@ -100,7 +100,19 @@ public abstract class AbstractUploadDescriptor
     return FormValidation.ok();
   }
 
-  @Override
+  public FormValidation doCheckBucketNameWithVars(
+      @QueryParameter final String bucketNameWithVars)
+      throws IOException {
+    return staticDoCheckBucketNameWithVars(bucketNameWithVars);
+  }
+
+  public FormValidation doCheckBucket(
+      @QueryParameter final String bucket)
+      throws IOException {
+    return staticDoCheckBucketNameWithVars(bucket);
+  }
+
+    @Override
   public AbstractUpload newInstance(StaplerRequest req, JSONObject formData)
       throws FormException {
     if (Boolean.FALSE.equals(formData.remove("stripPathPrefix"))) {

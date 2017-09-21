@@ -165,7 +165,7 @@ public class ClassicUpload extends AbstractUpload {
      * This callback validates the {@code pattern} input field's
      * values.
      */
-    public FormValidation doCheckPattern(
+    public static FormValidation staticDoCheckPattern(
         @QueryParameter final String pattern)
         throws IOException {
       String resolvedInput = Resolve.resolveBuiltin(pattern);
@@ -191,6 +191,16 @@ public class ClassicUpload extends AbstractUpload {
       // NOTE: This side of things must work well with windows backward
       // slashes.
       return FormValidation.ok();
+    }
+
+    /**
+     * This callback validates the {@code pattern} input field's
+     * values.
+     */
+    public FormValidation doCheckPattern(
+        @QueryParameter final String pattern)
+        throws IOException {
+      return staticDoCheckPattern(pattern);
     }
   }
 }

@@ -15,15 +15,12 @@
  */
 package com.google.jenkins.plugins.storage;
 
-import com.google.common.base.Objects;
 import com.google.jenkins.plugins.credentials.domains.RequiresDomain;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
 import com.google.jenkins.plugins.util.Resolve;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Util;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -33,7 +30,6 @@ import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import jenkins.tasks.SimpleBuildStep;
@@ -168,6 +164,22 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
         formData.remove("pathPrefix");
       }
       return super.newInstance(req, formData);
+    }
+
+    /**
+     * This callback validates the {@code bucketNameWithVars} input field's
+     * values.
+     */
+    public FormValidation doCheckBucket(
+        @QueryParameter final String bucket)
+        throws IOException {
+      return ClassicUpload.DescriptorImpl.staticDoCheckBucketNameWithVars(bucket);
+    }
+
+    public static FormValidation doCheckPattern(
+        @QueryParameter final String pattern)
+        throws IOException {
+      return ClassicUpload.DescriptorImpl.staticDoCheckPattern(pattern);
     }
   }
 }
