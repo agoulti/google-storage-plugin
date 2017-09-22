@@ -67,8 +67,8 @@ public class BuildGcsUploadReport extends AbstractGcsUploadReport {
   }
 
   /**
-   * @param build
-   *          the build to get {@link BuildGcsUploadReport} for.
+   * @param run
+   *          the run to get {@link BuildGcsUploadReport} for.
    * @return the existing {@link BuildGcsUploadReport} of a build. If none,
    *         create a new {@link BuildGcsUploadReport} and return.
    */

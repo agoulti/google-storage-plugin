@@ -116,9 +116,6 @@ public abstract class AbstractUpload
    *
    * @param bucket The unresolved name of the storage bucket within
    * which to store the resulting objects.
-   * @param showInline Whether to indicate in metadata that the file should be
-   * viewable inline in web browsers, rather than requiring it to be downloaded
-   * first.
    */
   public AbstractUpload(String bucket, @Nullable UploadModule module) {
     if (module != null) {
