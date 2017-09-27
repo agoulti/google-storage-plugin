@@ -134,6 +134,10 @@ public abstract class AbstractUpload
     perform(credentials, build, build.getWorkspace(), listener);
   }
 
+  private String moduleName() {
+    return Messages.GoogleCloudStorageUploader_DisplayName();
+  }
+
   /**
    * The main action entrypoint of this extension.  This uploads the
    * contents included by the implementation to our resolved storage
@@ -150,23 +154,12 @@ public abstract class AbstractUpload
     try {
       // Turn paths containing things like $BUILD_NUMBER and $JOB_NAME into
       // their fully resolved forms.
-      String bucketNameResolvedVars = getBucket();
-
-      if (run instanceof AbstractBuild) {
-        // Do variable name expansion only for non-pipeline builds.
-        bucketNameResolvedVars = Util.replaceMacro(
-            getBucket(), run.getEnvironment(listener));
-      }
-
-      if (!bucketNameResolvedVars.startsWith(GCS_SCHEME)) {
-        listener.error(module.prefix(
-            Messages.AbstractUploadDescriptor_BadPrefix(
-                bucketNameResolvedVars, GCS_SCHEME)));
+      String bucketNameResolvedVars = StorageUtil.processBucket(getBucket(), run, listener, moduleName());
+      /*
+      if (bucketNameResolvedVars.Equals("")) {
         return;
       }
-      // Lop off the GCS_SCHEME prefix.
-      bucketNameResolvedVars =
-          bucketNameResolvedVars.substring(GCS_SCHEME.length());
+      */
 
       UploadSpec uploads = getInclusions(
           run, checkNotNull(workspace), listener);
@@ -475,7 +468,7 @@ public abstract class AbstractUpload
           annotateObject(object, listener);
 
           // Log that we are uploading the file and begin executing the upload.
-          listener.getLogger().println(module.prefix(
+          listener.getLogger().println(StorageUtil.prefix(moduleName(),
               Messages.AbstractUpload_Uploading(relativePath)));
           
           performUploadWithRetry(executor, service, bucket, object, include);

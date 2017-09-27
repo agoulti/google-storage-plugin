@@ -70,7 +70,6 @@ public class UploadModule implements Serializable {
    * Prefix the given log message with our module.
    */
   public String prefix(String x) {
-    return Messages.UploadModule_PrefixFormat(
-        Messages.GoogleCloudStorageUploader_DisplayName(), x);
+    return StorageUtil.prefix(Messages.GoogleCloudStorageUploader_DisplayName(), x);
   }
 }

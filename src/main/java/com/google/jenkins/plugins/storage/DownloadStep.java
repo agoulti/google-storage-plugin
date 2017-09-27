@@ -47,51 +47,42 @@ import org.kohsuke.stapler.StaplerRequest;
  * to the storage bucket.
  */
 @RequiresDomain(value = StorageScopeRequirement.class)
-public class ClassicUploadStep extends Builder implements SimpleBuildStep, Serializable {
-  @Nonnull
-  protected ClassicUpload upload;
+public class DownloadStep extends Builder implements SimpleBuildStep, Serializable {
 
+  /**
+   * Construct the download step.
+   */
   @DataBoundConstructor
-  public ClassicUploadStep(String credentialsId, String bucket, String pattern) {
+  public DownloadStep(String credentialsId, String bucket, String localDirectory) {
+    this.bucket = bucket;
     this.credentialsId = credentialsId;
-    upload = new ClassicUpload(bucket, null, pattern, null, null);
+    this.localDirectory = localDirectory;
   }
 
   /**
-   * Construct the classic upload step. See ClassicUpload documentation for parameter descriptions.
+   * The bucket name specified by the user, which potentially contains
+   * unresolved symbols, such as $JOB_NAME and $BUILD_NUMBER.
    */
-  public ClassicUploadStep(String credentialsId, String bucket, @Nullable UploadModule module,
-      String pattern) {
-    this.credentialsId = credentialsId;
-    upload = new ClassicUpload(bucket, null, pattern, null, null);
+  public String getBucket() {
+    return bucket;
   }
+  private final String bucket;
 
   /**
-   * Whether to surface the file being uploaded to anyone with the link.
+   * The local directory in the Jenkins workspace that will receive the files. This might
+   * contain unresolved symbols, such as $JOB_NAME and $BUILD_NUMBER.
    */
-  @DataBoundSetter
-  public void setSharedPublicly(boolean sharedPublicly) {
-    upload.setSharedPublicly(sharedPublicly);
+  public String getLocalDirectory() {
+    return localDirectory;
   }
-  public boolean isSharedPublicly() {
-    return upload.isSharedPublicly();
+  private final String localDirectory;
+
+  private final String moduleName() {
+    return Messages.Download_BuildStepDisplayName();
   }
 
   /**
-   * Whether to indicate in metadata that the file should be viewable inline
-   * in web browsers, rather than requiring it to be downloaded first.
-   */
-  @DataBoundSetter
-  public void setShowInline(boolean showInline) {
-    upload.setShowInline(showInline);
-  }
-  public boolean isShowInline() {
-    return upload.isShowInline();
-  }
-
-
-  /**
-   * The path prefix that will be stripped from uploaded files. May be null
+   * The path prefix that will be stripped from downloaded files. May be null
    * if no path prefix needs to be stripped.
    *
    * Filenames that do not start with this prefix will not be modified. Trailing slash is
@@ -99,20 +90,14 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
    */
   @DataBoundSetter
   public void setPathPrefix(@Nullable String pathPrefix) {
-    upload.setPathPrefix(pathPrefix);
+    if (pathPrefix != null && !pathPrefix.endsWith("/")) {
+      pathPrefix += "/";
+    }
+    this.pathPrefix = pathPrefix;
   }
   @Nullable
-  public String getPathPrefix() {
-    return upload.getPathPrefix();
-  }
-
-  public String getPattern() {
-    return upload.getPattern();
-  }
-
-  public String getBucket() {
-    return upload.getBucket();
-  }
+  public String getPathPrefix() { return pathPrefix;  }
+  private String pathPrefix;
 
   /**
    * The unique ID for the credentials we are using to
@@ -131,14 +116,10 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
   @Override
   public void perform(Run<?,?> run, FilePath workspace, Launcher launcher, TaskListener listener)
       throws IOException {
-    try {
-      upload.perform(GoogleRobotCredentials.getById(getCredentialsId()), run, workspace, listener);
-    } catch(UploadException e) {
-      throw new IOException("Could not perform upload", e);
-    }
+
   }
 
-  @Extension @Symbol("googleStorageUpload")
+  @Extension @Symbol("googleStorageDownload")
   public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
     /**
@@ -146,7 +127,7 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
      */
     @Override
     public String getDisplayName() {
-      return Messages.ClassicUpload_BuildStepDisplayName();
+      return Messages.Download_BuildStepDisplayName();
     }
 
     /**
@@ -176,10 +157,15 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
       return ClassicUpload.DescriptorImpl.staticDoCheckBucket(bucket);
     }
 
-    public static FormValidation doCheckPattern(
-        @QueryParameter final String pattern)
+    public static FormValidation doCheckLocalDirectory(
+        @QueryParameter final String localDirectory)
         throws IOException {
-      return ClassicUpload.DescriptorImpl.staticDoCheckPattern(pattern);
+      String resolvedDir = Resolve.resolveBuiltin(localDirectory);
+      if(resolvedDir.isEmpty()) {
+        return FormValidation.error(Messages.Download_EmptyDir());
+      }
+
+      return FormValidation.ok();
     }
   }
 }
