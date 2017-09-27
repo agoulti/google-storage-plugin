@@ -22,6 +22,7 @@ import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.when;
 
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2ScopeRequirement;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
@@ -44,35 +45,18 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.apache.http.impl.client.HttpClientBuilder;
 
 /**
  * Tests for {@link ClassicUpload}.
  */
 public class ClassicUploadStepTest {
-
   @Rule
   public JenkinsRule jenkins = new JenkinsRule();
 
   @Mock
   private GoogleRobotCredentials credentials;
   private GoogleCredential credential;
-
-  private FreeStyleProject project;
-  private ClassicUpload underTest;
-
-  private final MockExecutor executor = new MockExecutor();
-
-  private static class MockUploadModule extends UploadModule {
-    public MockUploadModule(MockExecutor executor) {
-      this.executor = executor;
-    }
-
-    @Override
-    public MockExecutor newExecutor() {
-      return executor;
-    }
-    private final MockExecutor executor;
-  }
 
   @Before
   public void setUp() throws Exception {
@@ -83,37 +67,37 @@ public class ClassicUploadStepTest {
 
     if (jenkins.jenkins != null) {
       SystemCredentialsProvider.getInstance().getCredentials().add(credentials);
-
-      // Create a project to which we may attach our uploader.
-      project = jenkins.createFreeStyleProject("test");
     }
-
+/*
     credential = new GoogleCredential();
     when(credentials.getGoogleCredential(isA(
         GoogleOAuth2ScopeRequirement.class)))
         .thenReturn(credential);
-
-    // Return ourselves as remotable
     when(credentials.forRemote(isA(GoogleOAuth2ScopeRequirement.class)))
         .thenReturn(credentials);
+        */
   }
 
   private void ConfigurationRoundTripTest(ClassicUploadStep s) throws Exception {
-    FreeStyleProject project = jenkins.createFreeStyleProject("round-trip");
-    project.getBuildersList().add(s);
-
-    jenkins.submit(jenkins.createWebClient().getPage(project, "configure").getFormByName("config"));
-    ClassicUploadStep after = project.getBuildersList().get(ClassicUploadStep.class);
-
-    jenkins.assertEqualBeans(s, after, "bucket");
+    ClassicUploadStep after = jenkins.configRoundtrip(s);
+    jenkins.assertEqualBeans(s, after, "bucket,pattern,pathPrefix"); // credentialsId
   }
 
   @Test
   public void testRoundtrip() throws Exception {
-    ConfigurationRoundTripTest(new ClassicUploadStep("credentials", "bucket", "pattern"));
+    ClassicUploadStep step = new ClassicUploadStep(CREDENTIALS_ID, "bucket", "pattern");
+    ConfigurationRoundTripTest(step);
+
+    step.setPathPrefix("prefix");
+    ConfigurationRoundTripTest(step);
+
+    step.setSharedPublicly(true);
+    ConfigurationRoundTripTest(step);
+
+    step.setShowInline(true);
+    ConfigurationRoundTripTest(step);
   }
 
-  private static final String PROJECT_ID = "foo.com:bar-baz";
-  private static final String CREDENTIALS_ID = "bazinga";
-  private static final String NAME = "Source (foo.com:bar-baz)";
+  private static final String PROJECT_ID = "foo.com:project-build";
+  private static final String CREDENTIALS_ID = "builderStep";
 }

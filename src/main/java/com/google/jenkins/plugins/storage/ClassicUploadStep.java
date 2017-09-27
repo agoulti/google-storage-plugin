@@ -118,10 +118,14 @@ public class ClassicUploadStep extends Builder implements SimpleBuildStep, Seria
    * The unique ID for the credentials we are using to
    * authenticate with GCS.
    */
+  @DataBoundSetter
+  public void setCredentialsId(String credentialsId) {
+    this.credentialsId = credentialsId;
+  }
   public String getCredentialsId() {
     return credentialsId;
   }
-  private final String credentialsId;
+  private String credentialsId;
 
   @Override
   public BuildStepMonitor getRequiredMonitorService() {
